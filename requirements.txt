@@ -1,0 +1,23 @@
+# Reproduction environment for ECLIPSE (ADE20K continual panoptic segmentation)
+# Tested on Google Colab (Python 3.12, CUDA GPU runtime).
+#
+# The heavy dependencies are installed from source in the notebook because they
+# need to be compiled against the runtime's CUDA/PyTorch versions. They are
+# listed here for documentation; install them with the commands shown below.
+
+# --- Installed from source (see notebook/PythonEclipseImprovement.ipynb) ---
+# pip install 'git+https://github.com/facebookresearch/detectron2.git'
+# pip install git+https://github.com/cocodataset/panopticapi.git
+# pip install git+https://github.com/mcordts/cityscapesScripts.git
+
+# --- Installed from PyPI ---
+opencv-python
+numpy
+matplotlib
+Pillow
+timm
+scipy
+
+# --- Project-specific dependencies ---
+# After cloning https://github.com/clovaai/ECLIPSE, also run:
+# pip install -r requirements.txt   # (the ECLIPSE repo's own requirements file)
