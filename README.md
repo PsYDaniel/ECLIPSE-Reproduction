@@ -82,8 +82,7 @@ Every item the course requires, and where to find it:
 | 4 | AI plan file (parallel) | [`plan/ai-plan.md`](plan/ai-plan.md) |
 | 5 | AI collaboration — reproducing results per stage | [`docs/ai-collaboration.md`](docs/ai-collaboration.md) |
 | 6 | Reflective takeaways (1–2 pages) | [`takeaways.pdf`](takeaways.pdf) |
-| 7 | Project video (2–5 min) | [Linked above](VIDEO_LINK_HERE) and on the website |
-| 8 | GitHub project website | [`index.html`](index.html) → published via GitHub Pages |
+| 7 | GitHub project website | [`index.html`](index.html) → published via GitHub Pages |
 
 ## 5. How to reproduce (quick version)
 
