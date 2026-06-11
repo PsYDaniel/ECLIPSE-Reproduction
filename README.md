@@ -64,7 +64,7 @@ ECLIPSE-reproduction/
 │   └── PythonEclipseImprovement.ipynb   # The actual project code
 ├── results/
 │   └── reproduction_graph.png # Official vs. reproduced vs. optimized chart
-├── takeaways.pdf              # Reflective writeup (Hebrew, 1–2 pages)
+├── takeaways.md              # Reflective writeup (Hebrew, 1–2 pages)
 ├── requirements.txt           # Environment notes
 ├── GITHUB_SETUP.md            # How to publish this repo + what to fill in
 └── LICENSE
@@ -81,7 +81,7 @@ Every item the course requires, and where to find it:
 | 3 | Algorithmic thinking — how each stage is tested | [`docs/algorithmic-thinking.md`](docs/algorithmic-thinking.md) §3 |
 | 4 | AI plan file (parallel) | [`plan/ai-plan.md`](plan/ai-plan.md) |
 | 5 | AI collaboration — reproducing results per stage | [`docs/ai-collaboration.md`](docs/ai-collaboration.md) |
-| 6 | Reflective takeaways (1–2 pages) | [`takeaways.pdf`](takeaways.pdf) |
+| 6 | Reflective takeaways (1–2 pages) | [`takeaways.md`](takeaways.md) |
 | 7 | GitHub project website | [`index.html`](index.html) → published via GitHub Pages |
 
 ## 5. How to reproduce (quick version)
