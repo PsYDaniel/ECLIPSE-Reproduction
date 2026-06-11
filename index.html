@@ -121,8 +121,9 @@
     <span class="tag">Python Course Project · Paper Reproduction</span>
     <h1>Reproducing ECLIPSE</h1>
     <p class="lede">Efficient continual learning in <b>panoptic segmentation</b> with visual prompt
-      tuning — reproduced on the ADE20K benchmark across three continual scenarios, plus a bonus
-      threshold-optimisation experiment.</p>
+      tuning — reproduced on the ADE20K benchmark across three continual scenarios, plus a measured
+      sensitivity analysis of an undocumented inference threshold and a logit-manipulation
+      delta-search improvement attempt.</p>
     <div class="meta">
       <span>Authors:&nbsp;<b>Daniel Chicherin &amp; Or Blazer</b></span>
       <span>Course:&nbsp;<b>Python</b></span>
@@ -151,7 +152,9 @@
     <div class="callout">
       <b>The claim we test:</b> ECLIPSE's published ADE20K results are reproducible. We evaluate the
       authors' released checkpoints for the 100-50, 100-10 and 100-5 scenarios and compare PQ to the
-      paper — then try to nudge it higher by lowering the mask-confidence threshold.
+      paper — then measure how much the results depend on the confidence filter the paper never
+      documents, and search the paper's own inference-time logit-manipulation deltas for a better
+      setting.
     </div>
   </div>
 </section>
@@ -164,20 +167,28 @@
       <a id="img-link" href="results/reproduction_graph.png" target="_blank" rel="noopener">
         <img src="results/reproduction_graph.png" alt="Official vs. reproduced vs. optimised PQ for the three scenarios">
       </a>
-      <figcaption>Official paper vs. our reproduction vs. our threshold-optimised bonus run. Click to enlarge.</figcaption>
+      <figcaption>Official paper vs. our reproduction vs. threshold sensitivity — every bar measured in our eval-only runs. Click to enlarge.</figcaption>
     </figure>
     <table>
       <thead>
-        <tr><th>Scenario</th><th>Tasks</th><th>Official paper</th><th>Our reproduction</th><th>Δ vs. paper</th><th>Bonus (thr 0.35)</th></tr>
+        <tr><th>Scenario</th><th>Tasks</th><th>Official paper</th><th>Our reproduction (official settings)</th><th>Δ vs. paper</th><th>thr 0.35</th><th>thr 0.5</th></tr>
       </thead>
       <tbody>
-        <tr><td>100-50</td><td>2</td><td>35.6</td><td>35.63</td><td class="delta">+0.03</td><td>35.95</td></tr>
-        <tr><td>100-10</td><td>6</td><td>33.9</td><td>33.84</td><td class="delta">−0.06</td><td>34.20</td></tr>
-        <tr><td>100-5</td><td>11</td><td>32.9</td><td>32.85</td><td class="delta">−0.05</td><td>33.10</td></tr>
+        <tr><td>100-50</td><td>2</td><td>35.6</td><td>35.59</td><td class="delta">−0.01</td><td>35.57</td><td>32.31</td></tr>
+        <tr><td>100-10</td><td>6</td><td>33.9</td><td>33.84</td><td class="delta">−0.06</td><td>33.82</td><td>32.31</td></tr>
+        <tr><td>100-5</td><td>11</td><td>32.9</td><td>32.81</td><td class="delta">−0.09</td><td>32.76</td><td>31.34</td></tr>
       </tbody>
     </table>
     <p style="margin-top:14px;color:var(--muted);font-size:.93rem">Every reproduced number lands within
-      ±0.1 PQ of the paper, and the lower threshold gives a small, consistent gain. "100-50" = 100
+      ±0.1 PQ of the paper, including the base/novel split (100-50: 41.73/23.31 vs. the paper's
+      41.7/23.5). Two improvement attempts are fully documented: a Swin-T backbone retraining
+      (abandoned — 6h of GPU produced a base too weak, PQ 14.66, itself confirming that prompt
+      tuning inherits the frozen base's quality) and a 12-run grid search over the paper's own
+      logit-manipulation deltas (clean negative result — the authors' values won every scenario).
+      The sensitivity columns show the results depend on the near-zero confidence filter
+      shipped in the released config (<code>OBJECT_MASK_THRESHOLD: 0.0</code>, never mentioned in the
+      paper): a conventional 0.5 filter costs up to 3.3 PQ, almost entirely on novel classes —
+      empirically confirming that prompt-tuned new classes are under-confident. "100-50" = 100
       base classes, then 50 novel classes added in increments; more tasks means more chances to
       forget, which is why PQ falls from 100-50 to 100-5.</p>
   </div>
@@ -200,8 +211,9 @@
       <li><b>Clone ECLIPSE</b> and install Detectron2, panopticapi, cityscapesScripts and the repo requirements.</li>
       <li><b>Compile the CUDA op</b> — patch <code>.scalar_type().is_cuda()</code> → <code>.is_cuda()</code>, then run <code>make.sh</code>.</li>
       <li><b>Prepare ADE20K</b> — download the images and run the three <code>prepare_ade20k_*</code> scripts.</li>
-      <li><b>Download the checkpoints</b> and run each scenario in <code>--eval-only</code> mode (training is commented out).</li>
-      <li><b>Bonus:</b> lower <code>OBJECT_MASK_THRESHOLD</code> from <code>0.5</code> to <code>0.35</code> and re-evaluate.</li>
+      <li><b>Download the checkpoints</b> and evaluate each scenario in <code>--eval-only</code> mode at the exact official settings (all overrides on the command line, no source patching).</li>
+      <li><b>Sensitivity:</b> re-evaluate with <code>OBJECT_MASK_THRESHOLD</code> at <code>0.35</code> and <code>0.5</code> (official value: <code>0.0</code>).</li>
+      <li><b>Bonus:</b> run the <code>CONT.LOGIT_MANI_DELTAS</code> grid search (Experiment 3) and read the auto-generated verdict.</li>
     </ol>
   </div>
 </section>

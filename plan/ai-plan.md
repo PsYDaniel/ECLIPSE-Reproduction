@@ -50,6 +50,11 @@ work as a documented GitHub project. Stretch goal: improve PQ with a small, well
 ### Phase 4 — Extend it
 10. Lower `OBJECT_MASK_THRESHOLD` 0.5 → 0.35; re-evaluate all three. **Checkpoint:** PQ does not
     drop; ideally small gain.
+    > **Post-hoc note (kept for honesty):** this step's premise was wrong — the official released
+    > config sets the threshold to **0.0**, not 0.5, so "lowering to 0.35" was actually a slight
+    > degradation. Measurement replaced this step with a 0.0/0.35/0.5 sensitivity study (Stage 8)
+    > and a `CONT.LOGIT_MANI_DELTAS` grid search (Stage 9). The plan is preserved as written to
+    > show where plan and reality diverged.
 11. Plot official vs. reproduced vs. optimised. **Checkpoint:** `reproduction_graph.png` saved.
 
 ## Risk register

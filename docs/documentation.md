@@ -5,7 +5,7 @@
 
 This document is the full technical write-up of the project. The [README](../README.md) is the
 short overview; this file explains the *why* and *how* in detail. If you only read one section to
-understand the result, read [§7 Results](#7-results).
+understand the result, read [§7 Results](#7-results-all-measured--see-resultsmeasured_resultsjson-and-run-logs).
 
 ---
 
@@ -90,11 +90,13 @@ fiddliest part of the whole reproduction:
 
 - **Detectron2** — installed from source so it matches the runtime's PyTorch build.
 - **panopticapi** & **cityscapesScripts** — provide the panoptic eval and label utilities.
-- **MultiScaleDeformableAttention** — a custom CUDA operator that Mask2Former needs. It is compiled
-  on the machine via `make.sh`. On current PyTorch the file
-  `ms_deform_attn_cuda.cu` calls `.scalar_type().is_cuda()`, which no longer compiles; the notebook
-  patches it to `.is_cuda()` with a one-line `sed` before building. **This patch is the single most
-  important fix in the project** — without it the model will not run.
+- **MultiScaleDeformableAttention** — a custom CUDA operator that Mask2Former needs, compiled on
+  the machine (`setup.py build_ext --inplace`). On current PyTorch several legacy API calls in the
+  CUDA sources no longer compile; the notebook applies a small set of compatibility patches —
+  `.scalar_type().is_cuda()` → `.is_cuda()` (the critical one), `.type()` → `.scalar_type()` in
+  `AT_DISPATCH`, and `.data<…>` → `.data_ptr<…>` — before building, and verifies the built `.so`
+  imports. **These patches are the single most important fix in the project** — without them the
+  model will not run.
 
 See [`requirements.txt`](../requirements.txt) for the full list and the exact install commands.
 
@@ -107,24 +109,32 @@ its verification criteria, in [`algorithmic-thinking.md`](algorithmic-thinking.m
 2. **Compile** the CUDA op (with the `scalar_type` patch).
 3. **Prepare ADE20K** — download images, run the three `prepare_*` scripts.
 4. **Fetch checkpoints** and inspect the run script for each scenario.
-5. **Evaluate** each scenario (`100-50`, `100-10`, `100-5`) in `--eval-only` mode, with the long
-   training command commented out so only evaluation runs.
-6. **Bonus optimisation** — lower the object-mask confidence threshold and re-measure.
-7. **Plot** the official-vs-reproduced-vs-optimised comparison chart.
+5. **Evaluate** each scenario (`100-50`, `100-10`, `100-5`) in `--eval-only` mode at the *exact
+   official settings*, verified line-by-line against `script/ade_ps/*.sh` in the official repo. All
+   experiment settings are passed as command-line config overrides — the checked-out source is never
+   patched, so every run is traceable to the official commit plus a logged set of overrides.
+6. **Sensitivity experiment** — re-evaluate with the confidence filter (`OBJECT_MASK_THRESHOLD`)
+   raised from the official 0.0 to 0.35 and 0.5.
+7. **Improvement attempt** — eval-only grid search over the paper's own logit-manipulation deltas
+   (`CONT.LOGIT_MANI_DELTAS`).
+8. **Report** — tables and chart generated *only* from parsed Detectron2 evaluation logs.
 
 A recurring engineering theme: the project repeatedly **copies the work onto Colab's fast local
 disk** (and rebuilds a clean clone) instead of running from Google Drive, because Drive I/O on the
 20k+ image dataset is the dominant bottleneck.
 
-## 7. Results
+## 7. Results (all measured — see `results/measured_results.json` and run logs)
 
 PQ over all classes, after the final task:
 
-| Scenario | Official paper | Our reproduction | Δ vs. paper | Bonus (thr 0.35) |
-|:--------:|:--------------:|:----------------:|:-----------:|:----------------:|
-| 100-50   | 35.6 | 35.63 | +0.03 | 35.95 |
-| 100-10   | 33.9 | 33.84 | −0.06 | 34.20 |
-| 100-5    | 32.9 | 32.85 | −0.05 | 33.10 |
+| Scenario | Official paper | Our reproduction (official settings) | Δ vs. paper |
+|:--------:|:--------------:|:------------------------------------:|:-----------:|
+| 100-50   | 35.6 | 35.59 | −0.01 |
+| 100-10   | 33.9 | 33.84 | −0.06 |
+| 100-5    | 32.9 | 32.81 | −0.09 |
+
+The reproduction also matches the paper's **base/novel split** (e.g. 100-50: ours 41.73 base /
+23.31 novel vs. the paper's 41.7 / 23.5), which is a stronger check than the aggregate number alone.
 
 ![Results chart](../results/reproduction_graph.png)
 
@@ -133,27 +143,71 @@ is expected run-to-run variation in evaluation, not a methodological gap. The ra
 `100-50 > 100-10 > 100-5` is preserved, confirming the expected "more tasks → more forgetting"
 trend.
 
-## 8. Bonus experiment — confidence threshold
+## 8. Experiment — confidence-filter sensitivity (measured)
 
-Panoptic inference discards predicted masks whose confidence falls below
-`OBJECT_MASK_THRESHOLD` (default **0.5**). The hypothesis: in the continual setting, novel-class
-masks are systematically *less confident*, so a 0.5 cut-off throws away correct masks. Lowering the
-threshold to **0.35** should recover some of them.
+Panoptic inference first discards entire predicted segments whose *classification confidence* falls
+below `MODEL.MASK_FORMER.TEST.OBJECT_MASK_THRESHOLD`. The paper never documents this setting; the
+released config sets it to **0.0** (a conventional Mask2Former value would be 0.5–0.8). Because
+prompt-tuned novel classes produce systematically low confidence (~0.4), we predicted that raising
+the filter would hurt mostly novel classes. Measured result (eval-only, same checkpoints):
 
-The notebook applies the change directly in the configs/code and re-evaluates. The result is a
-small, consistent gain in every scenario (+0.25 to +0.35 PQ), which supports the hypothesis. The
-trade-off — admitting more low-confidence masks risks extra false positives — is discussed in the
-[takeaways](../takeaways.pdf).
+| Scenario | thr 0.0 (official) | thr 0.35 | thr 0.5 |
+|:--------:|:------------------:|:--------:|:-------:|
+| 100-50   | 35.59 | 35.57 | 32.31 |
+| 100-10   | 33.84 | 33.82 | 32.31 |
+| 100-5    | 32.81 | 32.76 | 31.34 |
 
-## 9. Conclusions
+At threshold 0.5 the loss is ~1.5–3.3 PQ and is concentrated almost entirely in novel classes
+(100-50 PQ_novel: 23.2 → 17.9, while PQ_base barely moves). **This empirically confirms the paper's
+own motivation** — new classes learned through frozen-model prompt tuning are under-confident — and
+shows the published results depend on an undocumented inference setting. An earlier draft of this
+project claimed a +0.3 PQ "threshold improvement" based on estimated numbers; measurement disproved
+that claim, and this section replaces it.
 
-- The ECLIPSE evaluation results **reproduce faithfully** (±0.1 PQ) across all three scenarios.
+## 9. Improvement attempts
+
+### 9a. Retraining (abandoned — fully documented)
+
+Before the inference-time experiments we tried the heavy route: a **Swin-T backbone swap**
+(32k-iteration base step, 6h01m of GPU time → base PQ 14.66; the 100-50 prompt step on top reached
+18.58 with novel classes at only 4.86) and an **R50 prompt-retraining** of 100-10 from a
+self-trained base (stalled at PQ 17.48 vs. the released checkpoint's 33.84). Both were abandoned
+on cost/benefit grounds — a paper-faithful base schedule is 160k iterations, ~5× what already
+consumed a full Colab session, per backbone. Full analysis and recovered logs:
+[`swin-t-retraining-attempt.md`](swin-t-retraining-attempt.md) and
+[`../results/logs/`](../results/logs/). The failure mode (weak frozen base → novel PQ 4.86)
+directly supports the paper's premise that prompt tuning inherits the frozen base's quality.
+
+### 9b. Logit-manipulation delta search (measured — negative result)
+
+ECLIPSE's logit manipulation (`CONT.LOGIT_MANI_DELTAS`, paper §3.4) is applied **at inference
+time**, and the authors hand-tuned it per scenario — the official 100-50 script *trains* with
+deltas `[0.6,-0.6]` but *evaluates* with `[-0.4,-0.6]`. Experiment 3 grid-searched a small
+neighbourhood of the official values (4 challengers per scenario, eval-only, 12 runs total, all
+log-parsed). **The official deltas won every scenario:**
+
+| Scenario | Official deltas → PQ | Best challenger → PQ |
+|:--------:|:--------------------:|:--------------------:|
+| 100-50   | `[-0.4,-0.6]` → 35.59 | `[-0.3,-0.5]` → 35.52 |
+| 100-10   | `[0.4,0.5×5]` → 33.84 | `[0.4,0.6×5]` → 33.72 |
+| 100-5    | `[0.4,0.6×10]` → 32.81 | `[0.3,0.6×10]` → 32.41 |
+
+We report this negative result as a finding: within our grid, the authors' released inference
+configuration is locally optimal — independent corroboration that their reported tuning is honest
+and careful, not cherry-picked beyond its own stated protocol.
+
+## 10. Conclusions
+
+- The ECLIPSE evaluation results **reproduce faithfully** (±0.1 PQ, including the base/novel
+  split) across all three scenarios.
 - The hardest part of reproduction was **not** the science but the **environment**: CUDA
   compilation, dataset preparation, and Colab I/O. The `scalar_type` patch is essential.
-- A simple, well-motivated tweak (lower mask threshold) yields a small but reliable improvement,
-  illustrating that reproduction can become genuine experimentation.
+- The results are **sensitive to an undocumented inference threshold**: the paper's numbers require
+  the near-zero confidence filter shipped in the released config. Quantifying that sensitivity
+  (and disproving our own earlier improvement claim by measurement) was the project's most valuable
+  scientific lesson.
 
-## 10. References
+## 11. References
 
 1. B. Kim, J. Yu, S. J. Hwang. *ECLIPSE: Efficient Continual Learning in Panoptic Segmentation with
    Visual Prompt Tuning.* CVPR 2024. arXiv:2403.20126.

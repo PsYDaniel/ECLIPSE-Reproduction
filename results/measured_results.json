@@ -1,0 +1,111 @@
+{
+  "note": "All values measured from Detectron2 eval-only runs on official ECLIPSE checkpoints, ADE20K val (final executed run 2026-06-11, logs in notebook/PythonEclipseImprovement.ipynb cell outputs). Retraining-attempt logs in results/logs/.",
+  "paper": "arXiv:2403.20126 (ECLIPSE, CVPR 2024)",
+  "official_paper_pq": {
+    "100-50": 35.6,
+    "100-10": 33.9,
+    "100-5": 32.9
+  },
+  "official_paper_pq_base_novel": {
+    "100-50": [
+      41.7,
+      23.5
+    ],
+    "100-10": [
+      41.4,
+      18.8
+    ],
+    "100-5": [
+      41.1,
+      16.6
+    ]
+  },
+  "measured": {
+    "official_settings_thr_0.0": {
+      "100-50": 35.591,
+      "100-10": 33.8359,
+      "100-5": 32.8054
+    },
+    "thr_0.35": {
+      "100-50": 35.5675,
+      "100-10": 33.8204,
+      "100-5": 32.7611
+    },
+    "thr_0.5": {
+      "100-50": 32.3077,
+      "100-10": 32.3124,
+      "100-5": 31.3365
+    }
+  },
+  "measured_pq_novel": {
+    "thr_0.35": {
+      "100-50": 23.1731,
+      "100-10": 18.6368,
+      "100-5": 16.2672
+    },
+    "thr_0.5": {
+      "100-50": 17.8797,
+      "100-10": 18.5304,
+      "100-5": 16.2835
+    }
+  },
+  "measured_pq_base_novel_official_settings": {
+    "100-50": [
+      41.73,
+      23.31
+    ],
+    "100-10": [
+      41.41,
+      18.68
+    ],
+    "100-5": [
+      41.07,
+      16.27
+    ]
+  },
+  "delta_search": {
+    "verdict": "negative result - official deltas optimal within the searched grid in all three scenarios",
+    "100-50": {
+      "[-0.4,-0.6] (official)": 35.591,
+      "[-0.3,-0.5]": 35.5233,
+      "[-0.4,-0.4]": 35.4401,
+      "[-0.4,-0.8]": 34.6325,
+      "[-0.2,-0.6]": 34.3164
+    },
+    "100-10": {
+      "[0.4,0.5x5] (official)": 33.8359,
+      "[0.4,0.6x5]": 33.7189,
+      "[0.3,0.5x5]": 33.5293,
+      "[0.4,0.4x5]": 33.2915,
+      "[0.5,0.5x5]": 32.9066
+    },
+    "100-5": {
+      "[0.4,0.6x10] (official)": 32.8054,
+      "[0.3,0.6x10]": 32.4105,
+      "[0.4,0.5x10]": 32.3737,
+      "[0.4,0.7x10]": 32.0473,
+      "[0.5,0.6x10]": 31.6003
+    }
+  },
+  "retraining_attempts": {
+    "swin_t_backbone_swap": {
+      "base_100cls_32k_iters": {
+        "PQ": 14.6626,
+        "training_time": "6:01:43",
+        "log": "results/logs/output_swin_t_base100_32k.txt"
+      },
+      "100_50_prompt_step_8k_iters": {
+        "PQ": 18.5832,
+        "PQ_novel": 4.8647,
+        "training_time": "0:35:13",
+        "log": "results/logs/output_swin_t_100_50.txt"
+      },
+      "decision": "abandoned - 17 PQ below R50 reference; see docs/swin-t-retraining-attempt.md"
+    },
+    "r50_100_10_prompt_retraining": {
+      "final_eval_PQ": 17.4771,
+      "log": "results/logs/output_100_10.txt",
+      "decision": "abandoned - prompt retraining from a self-trained base step could not approach the released checkpoints within Colab budget"
+    }
+  }
+}

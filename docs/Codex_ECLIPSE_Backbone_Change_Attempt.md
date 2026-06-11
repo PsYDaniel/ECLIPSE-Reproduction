@@ -11,7 +11,7 @@ Codex: Reviewed the original ECLIPSE reproduction notebook and updated it with i
 
 Files involved:
 
-- `ECLIPSE_Reproduction_Finally_Worked.ipynb`
+- `ECLIPSE_Reproduction_Worked.ipynb`
 
 Outcome:
 

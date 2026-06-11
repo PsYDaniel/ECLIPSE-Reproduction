@@ -66,14 +66,26 @@ The assistant produced the small Python snippet that rewrites the script (`text.
 commenting out the training line). **Verification:** a final `PQ` value prints; compare to the
 paper. Re-used almost verbatim for 100-10 and 100-5 by swapping the checkpoint and script name.
 
-### Stage 8 — Bonus threshold experiment
-> *"Hypothesis: novel-class masks are lower-confidence, so the default `OBJECT_MASK_THRESHOLD: 0.5`
-> discards correct masks. Give me a `sed` command to change it to 0.35 across the configs/code, then
-> a matplotlib grouped bar chart comparing official, reproduced and optimised PQ for the three
-> scenarios."*
+### Stage 8 — Sensitivity experiment (and the mistake that shaped the project)
+> *"Hypothesis: novel-class masks are lower-confidence, so the `OBJECT_MASK_THRESHOLD` filter
+> discards correct masks. Build an eval-only harness that runs every scenario at thresholds 0.0,
+> 0.35 and 0.5, passes the value as a command-line config override, and builds the table/graph
+> only from parsed Detectron2 logs."*
 
-**Verification:** the "Threshold changed from 0.5 to 0.35" confirmation prints, evaluation re-runs,
-and the chart shows three groups of three bars.
+An early draft of this experiment plotted *estimated* numbers for the 0.35 threshold without
+running it. An AI review of the notebook caught the hardcoded values, and we rebuilt the cell so it
+can only report log-parsed results. The measurement then **disproved our own claim**: the official
+threshold turned out to be 0.0 (not 0.5 as we had assumed), so 0.35 was a slight degradation, not
+an improvement — while threshold 0.5 cost up to 3.3 PQ, almost all of it on novel classes.
+
+### Stage 9 — Delta search improvement attempt
+> *"`CONT.LOGIT_MANI_DELTAS` is the paper's inference-time logit-manipulation knob and the authors
+> hand-picked the values per scenario. Generate an eval-only grid search over a small neighbourhood
+> of the official deltas, cache logs to Drive so the run is resumable, and write a verdict cell
+> that honestly reports improvement, mixed, or negative results."*
+
+**Verification:** every candidate's PQ is parsed from its own log; the official deltas are included
+in the ranking as the control.
 
 ## When the AI was wrong (and how we caught it)
 
@@ -83,6 +95,15 @@ and the chart shows three groups of three bars.
   **Caught by** reading the *first* error in the traceback, not the last.
 - Early plans under-estimated how long dataset prep and CUDA compilation would take. **Caught by**
   actually timing them and promoting both to their own checkpointed stages.
+- One assistant claimed the paper's default mask threshold was 0.5 with invented line numbers as
+  evidence; another assumed it too. **Caught by** fetching the official config from the ECLIPSE
+  repository, which sets `OBJECT_MASK_THRESHOLD: 0.0`. This single check rewrote our entire bonus
+  claim — and conversely, *our own notebook* was caught presenting estimated numbers as measured
+  ones by an AI review. Verification ran in both directions.
 
 The broader lesson — that AI output is a *draft to verify*, not a final answer — is the main subject
-of the [reflective takeaways](../takeaways.pdf).
+of the [reflective takeaways](../takeaways.md).
+
+> **Full prompt log.** This file describes the *methodology*; the complete stage-by-stage record —
+> every prompt, every verbatim error excerpt, every verification step, including the retraining
+> attempts and the negative delta-search result — is in [`ai-prompts.md`](ai-prompts.md).
