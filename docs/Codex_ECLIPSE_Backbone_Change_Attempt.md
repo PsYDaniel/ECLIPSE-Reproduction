@@ -244,3 +244,6 @@ Important current features:
 - ADE20K restore with progress and ETA.
 - Article-vs-run PQ graphing.
 
+**NOTE**
+- The ultimate result was that it was too time consuming and expensive to continue.
+- We decided to stick with the original backbone.
